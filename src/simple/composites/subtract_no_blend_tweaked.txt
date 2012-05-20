@@ -1,0 +1,44 @@
+
+uniform mat4 $1_Mi;
+uniform mat4 $2_Mi;
+
+float $1_F( vec3 );
+float $2_F( vec3 );
+vec3 $1_G( vec3 );
+vec3 $2_G( vec3 );
+
+
+
+float composite_F( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  
+  float f1 = $1_F( $1_Mi * p );
+  float f2 = $2_F( $2_Mi * p );
+  const float bias = 0.0001;
+  /// UV XXX SEEMS BETTER with this:
+  //if( abs( abs(f1) - abs(f2) ) < 0.00001 ) return f1;
+  if( (f1 + bias ) < 0. && -(f2-bias) > 0. ) return f1;
+  if( (f1 + bias ) < 0. && (f2 + bias ) < 0. ) return -f2;
+  return -f1;
+  return  -f1 +f2 - sqrt( f1 * f1 + bias + f2 * f2 );
+}
+
+uniform float deltaStep;
+vec3 composite_G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = composite_F( p + vec3( 0., 0., tstep ) ) - composite_F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = composite_F( p + vec3( 0., tstep, 0. ) ) - composite_F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = composite_F( p + vec3( tstep, 0., 0. ) ) - composite_F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}
+
+/*vec3 composite_G( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  float f1 = $1_F( ( $1_Mi * p ).xyz );
+  float f2 = -$2_F( ( $2_Mi * p ).xyz );
+  if( abs( f1 ) < abs( f2 ) ) return $1_G( ( $1_Mi * p ).xyz );
+  else return -$2_G( ( $2_Mi * p ).xyz );
+}*/

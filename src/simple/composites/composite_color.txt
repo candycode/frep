@@ -1,0 +1,18 @@
+
+//uniform sampler2D displacement;
+uniform mat4 $1_Mi;
+vec4 $1_Color( vec3, vec3 );
+
+#define IM_PI 1./3.14159265
+#define IM_PI2 .5/3.14159265
+
+vec4 ComputeColor( vec3 P, vec3 N )
+{
+  vec3 t = normalize( ( $1_Mi * gl_ModelViewMatrixInverse * vec4( P, 1. ) ).xyz );	  
+  // SPHERICAL POSITIONAL
+  float theta = .5 * ( IM_PI * asin( t.x ) + 1. ); 
+  float phi = .5 * ( IM_PI * asin( t.y ) + 1. );  
+  vec4 c = $1_Color( P,  N );
+  return vec4( c.rgb /* * texture2D( displacement, vec2( theta, phi ) ).rgb*/, c.a );
+  //vec4( c * texture2D( displacement, vec2( theta, phi ) ).rgb, c.a );	
+}

@@ -1,0 +1,47 @@
+// power
+#define P 8
+void powN1(inout vec3 z, float zr0, inout float dr) {
+//  float zr = sqrt( dot(z,z) );
+  float zo0 = asin( z.z/zr0 );
+  float zi0 = atan2( z.y,z.x );
+
+  float zr = pow( zr0, P-1 );
+  float zo = zo0 * P;
+  float zi = zi0 * P;
+  
+  dr = zr*dr*P + 1;
+  zr *= zr0;
+  z  = zr*vec3( cos(zo)*cos(zi), cos(zo)*sin(zi), sin(zo) );
+}
+
+float DE(vec3 z0)
+{
+  float3 z=z0;
+  float r;
+  float dr=2.;
+  int i=4;                   //max iteration count
+  r=length(z);
+  while(r<4. && i--) {
+    powN1(z,r,dr);
+    z+=z0;
+    r=length(z);
+  }
+  return 0.5*log(r)*r/dr;
+}
+
+
+float $F( vec3 p )
+{
+  return DE( p );	
+}
+
+uniform float deltaStep;
+
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

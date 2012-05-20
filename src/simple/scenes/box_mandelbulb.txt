@@ -1,0 +1,2 @@
+box materials\blue_plastic.txt primitives\box.txt
+mandelbulb materials\red_plastic.txt primitives\mandelbulb.txt

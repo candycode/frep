@@ -1,0 +1,84 @@
+
+//#define CUBEMAP_TEXTURE_COORD 1
+//#define PLANAR_TEXTURE_COORD 1
+#define SPHERICAL_POSITIONAL_TEXTURE_COORD
+
+#if defined( CUBEMAP_TEXTURE_COORD )
+uniform samplerCube displacement;
+#else
+uniform sampler2D displacement;
+#endif
+
+uniform mat4 $1_Mi;
+
+
+vec4 $1_Color( vec3, vec3 );
+
+#define IM_PI 1./3.14159265
+#define IM_PI2 .5/3.14159265
+
+vec4 SampleColor( vec3 v, vec3 n )
+{
+  vec4 p = vec4( v, 1.0 );
+  
+#if defined( SPHERICAL_TEXTURE_COORD )    
+  // SPHERE
+  float s = .5 * ( IM_PI * asin( n.x ) + 1. ); 
+  float t = .5 * ( IM_PI * asin( n.y ) + 1. ); 
+#elif defined( SPHERICAL_POSITIONAL_TEXTURE_COORD )  
+  // SPHERICAL POSITIONAL
+  vec3 sp = normalize( ( $1_Mi * gl_ModelViewMatrixInverse * p ).xyz );
+  float s = .5 * ( IM_PI * asin( sp.x ) + 1. ); 
+  float t = .5 * ( IM_PI * asin( sp.y ) + 1. ); 
+#elif defined( CYLINDRIC_TEXTURE_COORD )  
+  // CYLINDER  
+#elif defined ( PLANAR_TEXTURE_COORD )  
+  // BOX [-.5 .5] x [-.5 .5] 
+  vec4 pp = $1_Mi * gl_ModelViewMatrixInverse * p;
+  float s =  ( pp.x + .5 ); 
+  float t =  ( pp.y + .5 );
+#endif
+#ifndef CUBEMAP_TEXTURE_COORD  
+  vec2 texCoord = vec2( s, t );
+  vec4 color = texture2D( displacement, texCoord );
+  return color;
+#else
+  vec3 sp = /*normalize*/( ( $1_Mi * gl_ModelViewMatrixInverse * p ).xyz );
+  vec3 spt = vec3( sp.xy, .5 );
+  vec4 zcolor = textureCube( displacement, spt );
+  float za = textureCube( displacement, spt ).a;
+  spt = vec3( .5, sp.yz );
+  vec4 xcolor = textureCube( displacement, spt );
+  float xa = textureCube( displacement, spt ).a;
+  spt = vec3( sp.x, .5, sp.z );
+  vec4 ycolor = textureCube( displacement, spt );
+  float ya = textureCube( displacement, spt ).a;
+  float m = max( xa, max( ya, za ) );
+  if( m == xa ) return xcolor;
+  if( m == ya ) return ycolor;
+  return zcolor;
+  //return ( 1./(xa + ya + za) ) * ( xa * xcolor + ya * ycolor + za * zcolor );
+#endif  
+}
+
+vec4 ComputeColor( vec3 P, vec3 N )
+{
+  vec4 sampledcolor = SampleColor( P, N ); 
+  vec4 color = vec4( vec3( 1. ) - sampledcolor.rgb, 1. );//SampleColor( P, N );
+  //vec4 cc =  $1_Color( P, N ) * vec4( ( 1. - sampledcolor.a ) * color.rgb, 1. );
+  color = color * sampledcolor.a + ( 1. - sampledcolor.a ) * vec4(sampledcolor.rgb,1.);
+  vec4 cc =  $1_Color( P, N ) * vec4( color.rgb, 1. ); 	
+
+  	
+  
+  //if( abs( dot( normalize( P ), N ) ) > 0.5 ) cc.a = 0.;
+  return cc;
+  
+  vec3 t = normalize( ( $1_Mi * gl_ModelViewMatrixInverse * vec4( P, 1. ) ).xyz );	  
+  // SPHERICAL POSITIONAL
+  float theta = .5 * ( IM_PI * asin( t.x ) + 1. ); 
+  float phi = .5 * ( IM_PI * asin( t.y ) + 1. );  
+  vec4 c = $1_Color( P,  N );
+  return vec4( c.rgb /* * texture2D( displacement, vec2( theta, phi ) ).rgb*/, c.a );
+  //vec4( c * texture2D( displacement, vec2( theta, phi ) ).rgb, c.a );	
+}

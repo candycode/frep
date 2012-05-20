@@ -1,0 +1,93 @@
+const float SQDIST = .01;
+
+float dplane( vec3 pn, vec3 pp, vec3 P )
+{
+  // this has the effect of bezier-like curves, to make it NURBS-like
+  // return max( distance from plane, distance from end-points ).
+  vec3 n = normalize( pn ); 
+  float d = -dot( pn, pp );
+  return ( dot( P, n ) + d );
+}
+
+uniform float deltaStep;
+
+
+const vec3 P11 = vec3( -.5, 0., -.5 );
+const vec3 P21 = vec3( -.5, 0., .5 );
+const vec3 P31 = vec3( .5,  0., .5 );
+const vec3 P41 = vec3( .5,  0., -.5 ); 
+
+
+struct DistT
+{
+  float t;
+  float sqd;
+};
+
+DistT dlinesq( vec3 pi1, vec3 pi2, vec3 p )
+{
+  
+  vec3 p12 = pi2 - pi1;
+  vec3 p1p = p - pi1;
+  vec3 p2p = p - pi2;
+  
+  if( dot( p1p, p12 ) <= 0. ) return DistT( 0.,  dot( p1p, p1p ) );
+  if( dot( p2p, pi1 - pi2 ) <= 0. ) return DistT( 1., dot( p2p, p2p ) );
+  
+  vec3 n = normalize( p12 );
+  float t = dot( p1p, n );
+  vec3 mp =  pi1 + t * n;
+  return DistT( t, dot( p - mp,  p - mp ) );
+}
+
+
+const float d0 = 0.5;
+const float t0 = 0.5;
+const float rr = .25;
+
+float D( float t )
+{
+  float d = -d0 + sqrt( -t * t + 2. * t0 * t - t0 * t0 + rr );
+  return sign( d ) * d * d;
+}
+
+
+float $F( vec3 p )
+{
+  
+  float s12 = dplane( vec3( -1., 0., 0. ), vec3( -.5, 0., 0. ), p );
+  float s23 = dplane( vec3( 0., 0., 1. ), vec3( 0., 0., .5 ), p );
+  float s34 = dplane( vec3( 1., 0., 0. ), vec3( .5, 0., 0. ), p );
+  float s14 = dplane( vec3( 0., 0., -1. ), vec3( 0., 0., -.5 ), p );
+
+  // find minimum distance from plane and
+  //   minimum distance from segment on plane:
+  //   in this case the segments are parallel to the original
+  //   segments extruted along +/- y; the translated segment is therefor
+  //   found by simply using the point's y coordinate as the coorfinate
+  //   of the moving segment
+  float m = abs( s12 );
+  vec3 P2m = P21;
+  vec3 P1m = P11;
+  float s = sign( s12 );
+  if( abs( s23 ) < m ) { m = abs( s23 ); P2m = P31; P1m=P21; s = sign( s23 ); } 
+  if( abs( s34 ) < m ) { m = abs( s34 ); P2m = P41; P1m=P31; s = sign( s34 ); }
+  if( abs( s14 ) < m ) { m = abs( s14 ); P2m = P11; P1m=P41; s = sign( s14 ); }
+  P2m.y = p.y;
+  P1m.y = p.y;
+
+  DistT dt = dlinesq( P1m, P2m, p );
+   
+  float dd = -s*dt.sqd + D( dt.t );
+  
+  return dd;	
+}
+
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

@@ -1,0 +1,2 @@
+sphere1 materials\red_plastic.txt primitives\sphere.txt
+thick1 materials\blue_plastic.txt primitives\thick_sphere_surface.txt

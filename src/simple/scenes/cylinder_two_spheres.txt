@@ -1,0 +1,3 @@
+cylinder1 materials\blue_plastic.txt primitives\cylinder.txt
+sphere1 materials\red_plastic.txt primitives\sphere.txt
+sphere2 materials\green_plastic.txt primitives\sphere.txt

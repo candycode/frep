@@ -1,0 +1,3 @@
+cone1 materials\blue_plastic.txt primitives\cone.txt
+sphere1 materials\red_plastic.txt primitives\sphere.txt
+sphere2 materials\green_plastic.txt primitives\sphere.txt

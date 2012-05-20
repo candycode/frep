@@ -1,0 +1,49 @@
+
+vec3 p1 = vec3( -.5,  0., -.5 );
+vec3 p2 = vec3( -.25, 0.,  .5 );
+vec3 p3 = vec3(  .25, 0.,  .5 );
+vec3 p4 = vec3(  .5,  0., -.5 );
+
+const float SQDIST = .01;
+
+float dlinesq( vec3 pi1, vec3 pi2, vec3 p )
+{
+  
+  vec3 p12 = pi2 - pi1;
+  vec3 p1p = p - pi1;
+  vec3 p2p = p - pi2;
+  
+  if( dot( p1p, p12 ) <= 0. ) return dot( p1p, p1p );
+  if( dot( p2p, pi1 - pi2 ) <= 0. ) return dot( p2p, p2p );
+  
+  vec3 n = normalize( p12 );
+  float t = dot( p1p, n );
+  vec3 mp =  pi1 + t * n;
+  return dot( p - mp,  p - mp );
+}
+
+
+uniform float deltaStep;
+
+float $F( vec3 p )
+{
+
+  //float sq = min( dlinesq( p1, p2, p ), min( dlinesq( p3, p2, p ), dlinesq( p3, p4, p ) ) );
+  //return sq - 0.001;
+  float s12 = dlinesq( p1, p2, p );
+  float s23 = dlinesq( p2, p3, p );
+  float s34 = dlinesq( p3, p4, p );
+  const float b = 100.;//80.471;
+  float d = .33 * ( 1./( s12 * b ) + 1./( s23 * b ) + 1./( s34 * b ) );// - .04;
+  return (d - 0.04); 
+  //return  -.04 + exp( -sq * 80.471 );	
+}
+
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

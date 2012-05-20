@@ -1,0 +1,2 @@
+sphere1 objects\sphere.txt
+cone1 objects\cone.txt

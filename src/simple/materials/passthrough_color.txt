@@ -1,0 +1,15 @@
+vec4 ComputeColor( vec3 P, vec3 n )
+{
+  vec4 color = gl_FrontMaterial.diffuse;
+  const float kd = 1.0;
+  float ka = 0.01;
+  float ks = 1.;
+  float sh = 100.;
+  vec3 refcolor = vec3( 1, 1, 1 );
+  vec3 lightDir = vec3( 0., 0., -1. ); 
+  vec3 N = faceforward( n, lightDir, n );
+  float d = dot( N, -lightDir );
+  float s = pow( max( 0.0, dot( vec3( 0, 0, 1 ), reflect( lightDir, N ) ) ), sh );
+  float a = color.a * ( 1. - dot( vec3( 0., 0., 1 ), n ) );
+  return vec4(  ks * s * refcolor + kd * d * color.rgb + ka * color.rgb, a );
+}

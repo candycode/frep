@@ -1,0 +1,30 @@
+
+
+uniform mat4 $1_M;
+uniform mat4 $1_N;
+uniform mat4 $1_Mi;
+uniform mat4 $1_Ni;
+
+int $1_I( in vec3 rayOrigin, in vec3 rayDir, out vec3 nearI, out vec3 nearN, out vec3 farI, out vec3 farN );
+
+int composite_I( in vec3 rayOrigin, in vec3 rayDir, out vec3 nearI, out vec3 nearN, out vec3 farI, out vec3 farN )
+{
+
+  vec3 nearI1;
+  vec3 farI1;
+  vec3 nearN1;
+  vec3 farN1;
+
+
+  int i1 = $1_I( ( $1_Mi * vec4( rayOrigin, 1. ) ).xyz, ( $1_Ni * vec4( rayDir, 1. ) ).xyz,
+                         nearI1, nearN1, farI1, farN1 );
+            
+  if( i1 == 0 ) return 0;
+  
+  nearI = ( $1_M * vec4( nearI1, 1. ) ).xyz;
+  nearN = ( $1_N * vec4( nearN1, 1. ) ).xyz;
+  farI = ( $1_M * vec4( farI1, 1. ) ).xyz;
+  farN = ( $1_N * vec4( farN1, 1. ) ).xyz;
+   
+  return i1;
+}  

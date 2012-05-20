@@ -1,0 +1,1 @@
+frepup-simple.exe -vert shaders\iso.vert -frag shaders\traceandshade_bbox_autocompute.frag -primitives %1 -composite composites\union_blend.txt -compositeMat composites\composite_color_blended2.txt -dPrimitiveStep 0.3 -dCompositeStep 0.2

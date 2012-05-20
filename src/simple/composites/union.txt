@@ -1,0 +1,32 @@
+
+uniform mat4 $1_Mi;
+uniform mat4 $2_Mi;
+
+float $1_F(vec3);
+float $2_F(vec3);
+vec3 $1_G(vec3);
+vec3 $2_G(vec3);
+
+float blend( float v )
+{
+  if( abs( v ) < 0.00001 ) return 1.;
+	return sqrt( v );
+}
+
+
+float composite_F( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  float f1 = $1_F( $1_Mi * p );
+  float f2 = $2_F( $2_Mi * p );
+  return min( f1, f2 );// - blend( abs( -f1 - f2 ) ); 
+}
+
+vec3 composite_G( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  float f1 = $1_F( $1_Mi * p );
+  float f2 = $2_F( $2_Mi * p );
+  if( f1 < f2 ) return $1_G( $1_Mi * p );
+  else return $2_G( $2_Mi * p );
+}

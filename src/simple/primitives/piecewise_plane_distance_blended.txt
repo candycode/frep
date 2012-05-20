@@ -1,0 +1,35 @@
+const float SQDIST = .01;
+
+float dplane( vec3 pn, vec3 pp, vec3 P )
+{
+  // this has the effect of bezier-like curves, to make it NURBS-like
+  // return max( distance from plane, distance from end-points ).
+  vec3 n = normalize( pn ); 
+  float d = -dot( pn, pp );
+  return ( dot( P, n ) + d );
+}
+
+uniform float deltaStep;
+
+float $F( vec3 p )
+{
+  
+  float s12 = dplane( vec3( -1., 0., 0. ), vec3( -.5, 0., 0. ), p );
+  float s23 = dplane( vec3( 0., 0., 1. ), vec3( 0., 0., .5 ), p );
+  float s34 = dplane( vec3( 1., 0., 0. ), vec3( .5, 0., 0. ), p );
+  float s14 = dplane( vec3( 0., 0., -1. ), vec3( 0., 0., -.5 ), p );
+
+  const float b = 50.471;
+  float s = sign( s12 ) > 0. || sign( s23 ) > 0. || sign( s34 ) > 0. || sign( s14 ) > 0. ? 1. : -1.;
+  float d =  1. * ( 1./( abs( s12 * s12 ) * b ) + 1./( abs( s23 * s23 ) * b ) + 1./( abs( s34 * s34 ) * b ) + 1./( abs( s14 * s14 ) * b )) + s *1.;
+  return d;	
+}
+
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

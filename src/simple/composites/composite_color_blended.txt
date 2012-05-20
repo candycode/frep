@@ -1,0 +1,19 @@
+uniform mat4 $1_Mi;
+uniform mat4 $2_Mi;
+
+float $1_F( vec3 );
+float $2_F( vec3 );
+
+vec4 $1_Color( vec3, vec3 );
+vec4 $2_Color( vec3, vec3 );
+
+vec4 ComputeColor( vec3 p, vec3 N )
+{
+  vec3 P = ( gl_ModelViewMatrixInverse * vec4( p, 1.0 ) ).xyz;
+  vec3 p1 = ( $1_Mi * vec4( P, 1. ) ).xyz;
+  vec3 p2 = ( $2_Mi * vec4( P, 1. ) ).xyz;
+  float f1 = abs( $1_F( p1 ) );
+  float f2 = abs( $2_F( p2 ) );
+  if( f2 < f1 ) return $2_Color( p , N );
+  else return $1_Color( p, N );	
+}

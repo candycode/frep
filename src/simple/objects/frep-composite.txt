@@ -1,0 +1,18 @@
+
+uniform mat4 $1_Mi;
+uniform mat4 $2_Mi;
+
+float composite_F( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  return min( $1_F( $1_Mi * p ), - $2_F( $2_Mi * p ) ); 
+}
+
+vec3 composite_G( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  float f1 = $1_F( $1_Mi * p );
+  float f2 = -$2_F( $2_Mi * p );
+  if( f1 < f2 ) return $1_G( $1_Mi * p );
+  else return -$2_G( $2_Mi * p );
+}

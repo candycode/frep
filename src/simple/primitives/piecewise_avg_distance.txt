@@ -1,0 +1,28 @@
+
+vec3 p1 = vec3( -.5, 0., -.5 );
+vec3 p2 = vec3( -.25, 0.,  .5 );
+vec3 p3 = vec3(   0., .7, .7 );
+vec3 p4 = vec3(  .25, 0., .5 );
+vec3 p5 = vec3(  .5,  0., -.5 );
+
+float avgdist( vec3 p )
+{
+  float ad = .2 * ( distance( p, p1 ) + distance( p, p2 ) + distance( p, p3 ) + distance( p, p4 ) + distance( p, p5 ) );
+  return ad;
+}
+
+uniform float deltaStep;
+
+float $F( vec3 p )
+{
+  return avgdist( p ) - SQDIST;  /*dlinesq( p1, p2, p ) - SQDIST;*///in( dlinesq( p1, p2, p ), min( dlinesq( p2, p3, p ), dlinesq( p3, p4, p ) ) ) - SQDIST;	
+}
+
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

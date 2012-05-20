@@ -1,0 +1,2 @@
+box1 materials\blue_plastic.txt primitives\box.txt
+piecewise materials\red_plastic.txt primitives\piecewise_distance_blended.txt

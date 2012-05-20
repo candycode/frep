@@ -1,0 +1,26 @@
+
+const float $F_thickness = 0.1; 
+const float $F_radius = 0.5;
+const float $F_rext = $F_radius * $F_radius;
+const float $F_rint = ($F_radius - $F_thickness) * ($F_radius - $F_thickness);
+
+float $F_external( vec3 p )
+{
+  return dot( p.xyz, p.xyz ) - $F_rext;	
+}
+float $F_internal( vec3 p )
+{
+  return dot( p.xyz, p.xyz ) - $F_rint;	
+}
+
+vec3 $G( vec3 p )
+{
+  return 2.0 * vec3( p.x, p.y, p.z );
+}
+
+float $F( vec3 p )
+{
+  float f1 = $F_external( p );
+  float f2 = $F_internal( p );
+  return max( f1, -f2 );
+}

@@ -1,0 +1,23 @@
+
+uniform float deltaStep;
+uniform int osg_FrameNumber;
+
+float $F( vec3 p )
+{
+  const float a = .16;
+  const float c = .42;
+  float x2 = p.x * p.x;
+  float y2 = p.y * p.y;
+  float z2 = p.z * p.z;
+  float csqrtx2y2 = c - sqrt( x2 + y2 );
+  return csqrtx2y2 * csqrtx2y2 + z2 - a * a;
+}
+
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

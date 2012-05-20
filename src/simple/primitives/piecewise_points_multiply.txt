@@ -1,0 +1,198 @@
+
+uniform float deltaStep; //provided by client code
+
+// returns distance of point from plane
+float dplane( vec3 pn, vec3 pp, vec3 P )
+{
+  // this has the effect of bezier-like curves, to make it NURBS-like
+  // return max( distance from plane, distance from end-points ).
+  vec3 n = normalize( pn ); 
+  float d = -dot( pn, pp );
+  float dist = ( dot( P, n ) + d );
+  return dist;
+}
+
+// reference frame (OSG)
+//  z
+// ^     
+// |      y
+// |    /
+// |  /
+// |/______> x
+
+// Front face
+const vec3 Pfbl = vec3( -.5, -.5, -.5 );
+const vec3 Pftl = vec3( -.5, -.5,  .5 );
+const vec3 Pftr = vec3(  .5, -.5,  .5 );
+const vec3 Pfbr = vec3(  .5, -.5, -.5 ); 
+
+// Back face
+const vec3 Pbbl = vec3( -.5, .5, -.5 );
+const vec3 Pbtl = vec3( -.5, .5,  .5 );
+const vec3 Pbtr = vec3(  .5, .5,  .5 );
+const vec3 Pbbr = vec3(  .5, .5, -.5 ); 
+
+// Planes: normal and point on plane
+const vec3 Nyzn = vec3( -1., 0.,  0. ); const vec3 Pyzn = vec3( -.5,  0., 0.  );
+const vec3 Nyzp = vec3( 1.,  0.,  0. ); const vec3 Pyzp = vec3(  .5,  0., 0.  );
+const vec3 Nxyn = vec3( 0.,  0., -1. ); const vec3 Pxyn = vec3(  0.,  0., -.5 );
+const vec3 Nxyp = vec3( 0.,  0.,  1. ); const vec3 Pxyp = vec3(  0.,  0.,  .5 );
+const vec3 Nxzn = vec3( 0., -1.,  0. ); const vec3 Pxzn = vec3(  0., -.5, 0.  );
+const vec3 Nxzp = vec3( 0.,  1.,  0. ); const vec3 Pxzp = vec3(  0.,  .5, 0.  );
+
+// t coordinate on line segment and squared distance from point 
+struct DistT
+{
+  float t;
+  float sqd;
+};
+
+// computes the squared disatance from point to segment and returns
+// squared distance and linear coordinate of point projected onto segment
+DistT dlinesq( vec3 pi1, vec3 pi2, vec3 p )
+{
+  
+  vec3 p12 = pi2 - pi1;
+  vec3 p1p = p - pi1;
+  vec3 p2p = p - pi2;
+  
+  if( dot( p1p, p12 ) <= 0. ) return DistT( 0.,  dot( p1p, p1p ) );
+  if( dot( p2p, pi1 - pi2 ) <= 0. ) return DistT( 1., dot( p2p, p2p ) );
+  
+  vec3 n = normalize( p12 );
+  float t = dot( p1p, n );
+  vec3 mp =  pi1 + t * n;
+  return DistT( t, dot( p - mp,  p - mp ) );
+}
+
+// parameters for half sphere
+const float d0 = 0.5;
+const float t0 = 0.5;
+const float s0 = 0.5;
+//IMPORTANT: with radius tangent to bounding box the surface is flattened at tagent points
+//           try with e.g. rr = 0.4 * 0.4 = 0.16;
+const float rr = 0.25; 
+
+#define CIRCLE( t_ )  ( sqrt( -t_ * t_ + 2. * t0 * t_ - t0 * t0 + rr ) )
+
+#define SPHERE( s_, t_) ( sqrt( -t_ * t_ + 2. * t0 * t_ - t0 * t0 -s_ * s_ + 2. * s0 * s_ - s0 * s0 + rr ) )
+
+// computes distance from half sphere s(x,y) given 2D coordinates
+float D( float u, float v )
+{
+  float d = -d0 + SPHERE(u,v);
+  return sign( d ) * d * d;
+}
+
+//iso function
+float $F( vec3 p )
+{
+  // compute distance from planes
+  float dxyn = dplane( Nxyn, Pxyn, p );
+  float dxyp = dplane( Nxyp, Pxyp, p );
+  float dyzn = dplane( Nyzn, Pyzn, p );
+  float dyzp = dplane( Nyzp, Pyzp, p );
+  float dxzn = dplane( Nxzn, Pxzn, p );
+  float dxzp = dplane( Nxzp, Pxzp, p );
+
+  // 1) find closest face 
+  // 2) project point on face
+  // 3) compute plane coordinates as distance from projected face to
+  //    face edges
+  // 4) find distance from function by computing D(plane coordinates)
+  float ds = 10E10;
+  float s = -1.;
+  vec3 planeNormal = Nyzn;
+  vec3 Pu1, Pu2, Pv1, Pv2;
+  
+  // YZ- left face
+  if( abs( dyzn ) < ds )
+  {
+    planeNormal = Nyzn;
+    ds = abs( dyzn );
+    s  = sign( dyzn );
+    Pu2 = Pbbl; //yz = ( .5,.-.5);
+    Pu1 = Pfbl; //yz = (-.5, -.5);
+    Pv2 = Pftl; //yz = (-.5, .5)
+    Pv1 = Pfbl; //yz = (-.5, -.5)
+  }
+  // YZ+ right face
+  if( abs( dyzp ) < ds )
+  {
+    planeNormal = Nyzp;
+    ds = abs( dyzp );
+    s  = sign( dyzp );
+    Pu2 = Pbbr; //yz = ( .5,.-.5);
+    Pu1 = Pfbr; //yz = (-.5, -.5);
+    Pv2 = Pftr; //yz = (-.5, .5)
+    Pv1 = Pfbr; //yz = (-.5, -.5)
+  }
+  // XZ- front face
+  if( abs( dxzn ) < ds )
+  {
+    planeNormal = Nxzn;
+    ds = abs( dxzn );
+    s  = sign( dxzn );
+    Pu2 = Pfbr; //xz = ( .5,.-.5);
+    Pu1 = Pfbl; //xz = (-.5, -.5);
+    Pv2 = Pftl; //xz = (-.5, .5)
+    Pv1 = Pfbl; //xz = (-.5, -.5)
+  }
+  // XZ+ back face
+  if( abs( dxzp ) < ds )
+  {
+    planeNormal = Nxzp;
+    ds = abs( dxzp );
+    s  = sign( dxzp );
+    Pu2 = Pbbr; //xz = ( .5,.-.5);
+    Pu1 = Pbbl; //xz = (-.5, -.5);
+    Pv2 = Pbtl; //xz = (-.5, .5)
+    Pv1 = Pbbl; //xz = (-.5, -.5)
+  }
+  // XY- bottom face
+  if( abs( dxyn ) < ds )
+  {
+    planeNormal = Nxyn;
+    ds = abs( dxyn );
+    s  = sign( dxyn );
+    Pu2 = Pbbl; //xy = ( .5,.-.5);
+    Pu1 = Pfbl; //xy = (-.5, -.5);
+    Pv2 = Pfbr; //xy = (-.5, .5)
+    Pv1 = Pfbl; //xy = (-.5, -.5)
+  }
+  // XY+ top face
+  if( abs( dxyp ) < ds )
+  {
+    planeNormal = Nxyp;
+    ds = abs( dxyp );
+    s  = sign( dxyp );
+    Pu2 = Pbtl; //xy = ( .5,.-.5);
+    Pu1 = Pftl; //xy = (-.5, -.5);
+    Pv2 = Pftr; //xy = (-.5, .5)
+    Pv1 = Pftl; //xy = (-.5, -.5)
+  }
+  
+  // project point onto face
+  vec3 pp = p - s * planeNormal * ds;
+  // compute coordinates on plane
+  DistT dt1 = dlinesq( Pu1, Pu2, pp );
+  DistT dt2 = dlinesq( Pv1, Pv2, pp );
+  // compare with distance at coordinate 
+  float dd = -s*ds*ds + D( dt1.t, dt2.t );
+  return dd;	
+}
+
+//Gradient computation: note that when merging analytical distance fields
+//                      once the boundary surface closest to the point is the determined, it should be
+//                      possible to compute the gradient directly from the surface equation as
+//                      grad(p) -> grad(f(p)) -> grad h(d,u,v)); h = d - d(u,v) where d is the
+//                      distance field and (u,v) are the planar coordinates of the point projected
+//                      on te closest face
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

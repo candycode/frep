@@ -1,0 +1,5 @@
+sphere materials\passthrough_color.txt primitives\sphere.txt
+blob1 materials\red_plastic.txt primitives\blob2.txt
+blob2 materials\blue_plastic.txt primitives\blob2.txt
+blob3 materials\green_plastic.txt primitives\blob2.txt
+blob4 materials\blue_plastic.txt primitives\blob2.txt

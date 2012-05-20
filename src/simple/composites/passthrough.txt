@@ -1,0 +1,13 @@
+uniform mat4 $1_Mi;
+float $1_F( vec3 );
+vec3 $1_G( vec3 );
+
+float composite_F( vec3 v )
+{
+  return $1_F( ( $1_Mi * vec4( v, 1. ) ).xyz );
+}
+
+vec3 composite_G( vec3 v )
+{
+  return $1_G( ( $1_Mi * vec4( v, 1. ) ).xyz );
+}

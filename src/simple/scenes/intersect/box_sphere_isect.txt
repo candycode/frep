@@ -1,0 +1,2 @@
+box materials\red_plastic.txt primitives\with_intersection\box.txt
+sphere materials\blue_plastic.txt primitives\with_intersection\sphere.txt

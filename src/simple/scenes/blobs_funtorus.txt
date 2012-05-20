@@ -1,0 +1,3 @@
+funtorus materials\red_plastic.txt primitives\funtorus.txt
+blob2 materials\blue_plastic.txt primitives\blob.txt
+blob3 materials\green_plastic.txt primitives\blob.txt

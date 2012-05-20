@@ -1,0 +1,139 @@
+
+#if defined( CUBEMAP_TEXTURE_COORD )
+uniform samplerCube displacement;
+#else
+uniform sampler2D displacement;
+#endif
+#define CYLINDRIC_TEXTURE_COORD 1
+
+
+uniform mat4 $1_M;
+uniform mat4 $1_N;
+uniform mat4 $1_Mi;
+uniform mat4 $1_Ni;
+
+int $1_I( in vec3 rayOrigin, in vec3 rayDir, out vec3 nearI, out vec3 nearN, out vec3 farI, out vec3 farN );
+
+const float PI = 3.14159265;
+const float I_PI = 0.318309886;
+
+
+#if defined (CUBEMAP_TEXTURE_COORD )
+float B( vec3 texCoord )
+{
+  return 1. - textureCube( displacement, texCoord ).a;
+}
+
+#else
+#define DEPTH_COMPONENT 3
+float B( vec2 texCoord )
+{
+  //return -.2*sin(3. * PI * texture2D( displacement, texCoord )[DEPTH_COMPONENT]);
+  
+  return texture2D( displacement, texCoord )[DEPTH_COMPONENT];
+  //return -threads( texCoord );
+ 
+}
+#endif
+
+vec2 TexCoord( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+   
+#if defined( SPHERIC_TEXTURE_COORD )    
+  // SPHERE
+  float s = .5 * ( IM_PI * atan2( n.y, n.x ) + 1. ); 
+  float t = ( IM_PI * asin( n.y ) + .5 ); 
+#elif defined( SPHERICAL_POSITIONAL_TEXTURE_COORD )  
+  // SPHERICAL POSITIONAL
+  vec3 sp = normalize( ( $1_Mi * p ).xyz );
+  float s = .5 * ( IM_PI * asin( sp.x ) + 1. ); 
+  float t = .5 * ( IM_PI * asin( sp.y ) + 1. ); 
+#elif defined( CYLINDRIC_TEXTURE_COORD )  
+  // CYLINDER
+  vec3 sp = p.xyz;
+  float t =  /*fract*/( ( p.z + .5 ) );
+  float s = 0.;
+  s = .5 * ( I_PI * atan2( sp.x, sp.y ) + 1. );
+  /*if( abs( sp.x ) < 0.0001 && sp.y <= 0. )
+  {
+    s = 0.; 
+  }*/
+#elif defined ( PLANAR_TEXTURE_COORD )  
+  // BOX [-.5 .5] x [-.5 .5] 
+  float s =  ( p.x + .5 ); 
+  float t =  ( p.y + .5 );
+#endif
+  return vec2( s, t );
+ }
+
+
+
+float dlinesq( vec2 p1, vec2 p2, vec2 p )
+{
+  
+  vec2 p12 = p2 - p1;
+  vec2 pp2 = p2 - p; 
+  float dpp12 = dot( p12, pp2 );
+  float dp12 = dot( p12, p12 );
+  return dp12 * dp12 - dpp12 * dpp12;
+}
+
+
+float threads( vec2 tcoord )
+{
+  vec2 p0 = vec2( 0., 0. );
+  vec2 p1 = vec2( 1., 0. );
+  const float SQTHICKNESS = 0.01;
+  float M = tan( 45. * PI / 180. ); 
+  //while( p0.y < 1. )
+  {
+    p1.y = M + p0.y;
+    float d = dlinesq( p0, p1, tcoord );
+    if( d <= SQTHICKNESS ) return ( 1. - d );
+    //break;
+    p0.y = p1.y;
+  }
+  return 0.;
+
+}
+
+
+
+
+
+int composite_I( in vec3 rayOrigin, in vec3 rayDir, out vec3 nearI, out vec3 nearN, out vec3 farI, out vec3 farN )
+{
+
+  vec3 nearI1;
+  vec3 farI1;
+  vec3 nearN1;
+  vec3 farN1;
+
+
+  int i1 = $1_I( ( $1_Mi * vec4( rayOrigin, 1. ) ).xyz, ( $1_Ni * vec4( rayDir, 1. ) ).xyz,
+                         nearI1, nearN1, farI1, farN1 );
+            
+  if( i1 == 0 ) return 0;
+  
+  nearI = ( $1_M * vec4( nearI1, 1. ) ).xyz;
+  nearN = ( $1_N * vec4( nearN1, 1. ) ).xyz;
+  farI = ( $1_M * vec4( farI1, 1. ) ).xyz;
+  farN = ( $1_N * vec4( farN1, 1. ) ).xyz;
+  
+  const float CUTOFF = 0.5;
+  vec2 tn = TexCoord( nearI1 );
+  vec2 tf = TexCoord( farI1 );
+  if( B( tn ) < CUTOFF  )
+  {
+    if( B( tf ) < CUTOFF  )  return 0;
+    else
+    {
+      nearI = farI;
+      nearN = -farN;
+      return 1;
+    }
+  }
+   
+  return i1;
+}  

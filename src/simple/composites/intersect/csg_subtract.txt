@@ -1,0 +1,79 @@
+
+uniform mat4 $1_M;
+uniform mat4 $1_N;
+uniform mat4 $1_Mi;
+uniform mat4 $1_Ni;
+
+uniform mat4 $2_M;
+uniform mat4 $2_N;
+uniform mat4 $2_Mi;
+uniform mat4 $2_Ni;
+
+int $1_I( in vec3 rayOrigin, in vec3 rayDir, out vec3 nearI, out vec3 nearN, out vec3 farI, out vec3 farN );
+
+int $2_I( in vec3 rayOrigin, in vec3 rayDir, out vec3 nearI, out vec3 nearN, out vec3 farI, out vec3 farN );
+
+
+int composite_I( in vec3 rayOrigin, in vec3 rayDir, out vec3 nearI, out vec3 nearN, out vec3 farI, out vec3 farN )
+{
+
+  vec3 nearI1, nearI2;
+  vec3 farI1, farI2;
+  vec3 nearN1, nearN2;
+  vec3 farN1, farN2;
+
+
+  int i1 = $1_I( ( $1_Mi * vec4( rayOrigin, 1. ) ).xyz, ( $1_Ni * vec4( rayDir, 1. ) ).xyz,
+                         nearI1, nearN1, farI1, farN1 );
+  int i2 = $2_I( ( $2_Mi * vec4( rayOrigin, 1. ) ).xyz, ( $2_Ni * vec4( rayDir, 1. ) ).xyz,
+                         nearI2, nearN2, farI2, farN2 );
+  
+
+           
+  if( i1 == 0 ) return 0;
+  
+  if( i2 == 0 )
+  {
+    nearI = ( $1_M * vec4( nearI1, 1. ) ).xyz;
+    nearN = ( $1_N * vec4( nearN1, 1. ) ).xyz;
+    farI = ( $1_M * vec4( farI1, 1. ) ).xyz;;
+    farN = ( $1_N * vec4( farN1, 1. ) ).xyz;
+    return i1;
+  }
+  
+  ////////////////////////////////////////////
+  nearI1 = ( $1_M * vec4( nearI1, 1. ) ).xyz;
+  nearN1 = ( $1_N * vec4( nearN1, 1. ) ).xyz;
+  farI1 = ( $1_M * vec4( farI1, 1. ) ).xyz;;
+  farN1 = ( $1_N * vec4( farN1, 1. ) ).xyz;
+  nearI2 = ( $2_M * vec4( nearI2, 1. ) ).xyz;
+  nearN2 = ( $2_N * vec4( nearN2, 1. ) ).xyz;
+  farI2 = ( $2_M * vec4( farI2, 1. ) ).xyz;;
+  farN2 = ( $2_N * vec4( farN2, 1. ) ).xyz;                                      
+  
+  float far1Length = length( farI1 - rayOrigin );
+  float far2Length = length( farI2 - rayOrigin );
+  float near1Length = length( nearI1 - rayOrigin );
+  float near2Length = length( nearI2 - rayOrigin );
+ 
+ 
+  if( near2Length < near1Length && far2Length > near1Length && far2Length < far1Length )
+  {
+      nearI = farI2;
+      nearN = -farN2;
+      farI = farI1;
+      farN = -farN1;
+      return 2; 
+  }
+ 
+  if( near1Length < near2Length || near1Length > far2Length)
+  {
+     nearI = nearI1;
+     nearN = nearN1;
+     farI = farI1;
+     farN = farN1;
+     return 2;
+  } 
+   
+  return 0;
+}  

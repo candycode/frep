@@ -1,0 +1,48 @@
+
+uniform mat4 $1_Mi;
+uniform mat4 $2_Mi;
+uniform mat4 $3_Mi;
+
+float $1_F(vec3);
+float $2_F(vec3);
+float $3_F(vec3);
+vec3 $1_G(vec3);
+vec3 $2_G(vec3);
+vec3 $3_G(vec3);
+
+uniform float deltaStep;
+
+float blend( float v )
+{
+    if( abs( v ) < 0.00001 ) return 1.;
+	return .1 * sqrt( v );
+}
+
+float composite_F( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  float f1 = $1_F( $1_Mi * p );
+  float f2 = $2_F( $2_Mi * p );
+  float f3 = $3_F( $3_Mi * p );
+  return max( f1, -min( f2, f3 ) );// - blend( abs( -f1 + max( f2, f3 ) ) ); 
+}
+
+vec3 composite_G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdz = composite_F( p + vec3( 0., 0., tstep ) ) - composite_F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = composite_F( p + vec3( 0., tstep, 0. ) ) - composite_F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = composite_F( p + vec3( tstep, 0., 0. ) ) - composite_F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}
+/*vec3 composite_G( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  float f1 = $1_F( $1_Mi * p );
+  float f2 = $2_F( $2_Mi * p );
+  float f3 = $3_F( $3_Mi * p );
+  float mf = min( f1, min( f2, f3 ) );
+  if( mf == f1 ) return $1_G( $1_Mi * p );
+  else if( mf == f2 ) return -$2_G( $2_Mi * p );
+  else return -$3_G( $3_Mi * p );
+}*/

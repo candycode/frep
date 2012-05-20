@@ -1,0 +1,15 @@
+float $F( vec3 p )
+{
+  float r = length( p );
+  return pow( 1. - r, 4. ) * ( 4.*r + 1 );
+}
+
+uniform float deltaStep;
+vec3 $G( in vec3 p )
+{
+    float tstep = deltaStep;
+    float dfdx = $F( p + vec3( 0., 0., tstep ) ) - $F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = $F( p + vec3( 0., tstep, 0. ) ) - $F( p + vec3( 0., -tstep, 0. ) );
+    float dfdz = $F( p + vec3( tstep, 0., 0. ) ) - $F( p + vec3( -tstep, 0., 0. ) );
+    return 0.5 * vec3( dfdx, dfdy, dfdz ) / tstep; 
+}

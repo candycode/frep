@@ -1,0 +1,1 @@
+box materials\passthrough_color.txt primitives\box.txt

@@ -1,0 +1,1 @@
+sphere1 materials\passthrough_color.txt primitives\sphere.txt

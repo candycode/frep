@@ -1,0 +1,131 @@
+uniform float deltaStep;
+const float eps = 0.0000001;
+
+float IsoFunction( vec3 p );
+vec3 IsoGradient( vec3 p );
+
+
+#define H( s ) IsoFunction( origin.xyz + s * dir )
+
+#ifdef INTERPOLATE
+float Refine( float ts, float te, vec3 dir )
+{
+  
+    float tm = 0.;
+    float hm = 0.;
+    float hs = H( ts );
+    float he = H( te );	  
+    int n = 128;
+    while( n > 0 )
+    {
+       tm = ts + abs( hs/(he - hs ) ) * ( te - ts );
+       hm = H( tm ); 
+       if( abs( hm ) <= 2. * eps ) break;
+       if( hs * hm < 0. )
+       {
+         te = tm;
+         he = hm;
+       }
+       else
+       {
+         ts = tm;
+         hs = hm;
+       }
+       --n;
+    }
+    
+    return tm;
+}
+#else
+float Refine( float ts, float te, vec3 dir )
+{
+  
+    float tm = 0.;
+    float hm = 0.;
+    float hs = H( ts );
+    float he = H( te );	  
+    int n = 128;
+    while( n > 0 )
+    {
+       tm = .5 * (ts + te );
+       hm = H( tm ); 
+       if( abs( hm ) <= 4. * eps ) break;
+       if( hs * hm < 0. )
+       {
+         te = tm;
+         he = hm;
+       }
+       else
+       {
+         ts = tm;
+         hs = hm;
+       }
+       --n;
+    }
+    
+    return tm;
+}
+#endif
+
+
+int Intersect( in vec3 rayOrig, in vec3 rayDir, in vec2 minmax, out vec3 Pmin, out vec3 Nmin, out vec3 Pmax, out vec3 Nmax )
+{ 
+  float tstart = length( rayDir ) - deltaStep;
+  vec3 dir = normalize( rayDir );
+  // Where should we put max distance computation ? best is to pass to this function a min/max parameter
+  // which can be computed in the calling code
+  float maxDistance = maxDist;
+  if( maxDistance < eps ) discard;
+  float tend = tstart + maxDistance;
+  int numSteps = int( ( tend - tstart ) / deltaStep );
+  vec3 prev = origin.xyz + tstart * dir;
+  vec3 cur = prev;
+  float tcur = 0.;
+  float t = -1.0;
+  vec3 BBIAS = vec3( deltaStep );
+  for( int i = 1; i != numSteps; ++i )
+  {
+  	   
+    tcur = tstart + deltaStep * float( i );
+    // varying step ??
+    //tstep = tstep + dstep * tstep;
+    cur = origin.xyz + tcur * dir;
+	
+    if( !( all( greaterThanEqual( cur, boxCenter - halfBoxSize - BBIAS  ) ) &&
+           all( lessThanEqual( cur, boxCenter + halfBoxSize + BBIAS  ) ) ) )
+    {
+      t = -1.;
+      break;
+    }
+	
+    float f2 = IsoFunction( cur ); 
+    if( abs( f2 ) < eps )
+    {
+      t = 0.;
+      break;
+    }
+    float f1 = IsoFunction( prev );
+    if( abs( f1 ) < eps )
+    {
+      cur = prev;
+      t = 0.;
+      break;
+    }
+    if( f1 * f2 < 0. )
+    {
+      t = Refine( tcur - deltaStep, tcur, dir );
+      cur = origin.xyz + t * dir;
+      break;         
+    }
+   
+    prev = cur;
+  }
+  
+  if( t < 0. ) return 0;
+  
+  //first intersection only for now
+  Pmin = cur;
+  Nmin = IsoGradient( cur );
+  return 1;  
+  
+}

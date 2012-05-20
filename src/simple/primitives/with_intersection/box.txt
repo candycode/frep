@@ -1,0 +1,95 @@
+
+
+const float BOXHSIZE = 0.5;
+const float BB = BOXHSIZE * BOXHSIZE;
+
+float $F( vec3 p )
+{
+  vec3 f = p * p - vec3( BB ); 
+  return max( f[ 0 ], max( f[ 1 ], f[ 2 ] ) );
+}
+
+int $I( in vec3 rayOrig, in vec3 rayDir, out vec3 Pmin, out vec3 Nmin, out vec3 Pmax, out vec3 Nmax )
+{
+  const vec3 BBIAS = vec3( 0.00001 ); // OPTIMAL BIAS!
+  vec3 halfsize = vec3( BOXHSIZE );
+// solve 3 second deg. equations in parallel
+  vec3 a =  rayDir * rayDir;
+  vec3 b = 2.0 * ( rayDir * rayOrig );
+  vec3 c = ( rayOrig * rayOrig ) - halfsize * halfsize;
+  vec3 d = b * b - 4. * a *  c;
+  vec3 tmin = vec3( -1. );
+  vec3 tmax = vec3( -1. );
+  int intersections = 0;
+  if( d.x > 0. )
+  { 
+    float sqrtd = sqrt( d.x );
+    tmin.x = .5 * ( -b.x - sqrtd ) / a.x;
+    tmax.x = .5 * ( -b.x + sqrtd ) / a.x;
+    vec3 p1 = rayDir * tmin.x + rayOrig;
+    vec3 p2 = rayDir * tmax.x + rayOrig;
+    if( all( greaterThanEqual( p1, -halfsize - BBIAS ) ) &&
+        all( lessThanEqual( p1, halfsize + BBIAS  ) ) )
+    {
+      Pmin = p1;
+      Nmin = vec3( p1.x, 0., 0. );
+      ++intersections;
+    }
+    if( all( greaterThanEqual( p2, -halfsize - BBIAS ) ) &&
+        all( lessThanEqual( p2, halfsize + BBIAS ) ) )
+    {
+      Pmax = p2;
+      Nmax = vec3( p2.x, 0., 0. );
+      ++intersections;
+    }   
+  }
+        
+  if( d.y > 0. )
+  { 
+    float sqrtd = sqrt( d.y );
+    tmin.y = .5 * ( -b.y - sqrtd ) / a.y;
+    tmax.y = .5 * ( -b.y + sqrtd ) / a.y;
+    vec3 p1 = rayDir * tmin.y + rayOrig;
+    vec3 p2 = rayDir * tmax.y + rayOrig;
+    if( all( greaterThanEqual( p1, -halfsize - BBIAS ) ) &&
+        all( lessThanEqual( p1, halfsize + BBIAS ) ) )
+    {
+      Pmin = p1;
+      Nmin = vec3( 0., p1.y, 0. );
+      ++intersections;
+    }
+    if( all( greaterThanEqual( p2, -halfsize - BBIAS ) ) &&
+        all( lessThanEqual( p2, halfsize + BBIAS ) ) )
+    {
+      Pmax = p2;
+      Nmax = vec3( 0., p2.y, 0. );
+      ++intersections;
+    }   
+  }
+  
+  if( d.z > 0. )
+  { 
+    float sqrtd = sqrt( d.z );
+    tmin.z = .5 * ( -b.z - sqrtd ) / a.z;
+    tmax.z = .5 * ( -b.z + sqrtd ) / a.z;
+    vec3 p1 = rayDir * tmin.z + rayOrig;
+    vec3 p2 = rayDir * tmax.z + rayOrig;
+    if( all( greaterThanEqual( p1, -halfsize - BBIAS ) ) &&
+        all( lessThanEqual( p1, halfsize + BBIAS ) ) )
+    {
+      Pmin = p1;
+      Nmin = vec3( 0., 0., p1.z );
+      ++intersections;
+    }
+    if( all( greaterThanEqual( p2, -halfsize - BBIAS ) ) &&
+        all( lessThanEqual( p2, halfsize + BBIAS  ) ) )
+    {
+      Pmax = p2;
+      Nmax = vec3( 0., 0., p2.z );
+      ++intersections;
+    }   
+  }
+
+  return intersections;
+
+}

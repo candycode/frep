@@ -1,0 +1,13 @@
+float $F( vec3 p )
+{
+  return exp( -3. * dot( p, p ) ) -.5;	
+}
+
+vec3 $G( vec3 p )
+{
+  float f =  exp( -3. * dot( p, p ) );
+  float dx = -6. * p.x * f;
+  float dy = -6. * p.y * f;
+  float dz = -6. * p.z * f;  
+  return f * vec3( dx, dy, dz ); 
+}

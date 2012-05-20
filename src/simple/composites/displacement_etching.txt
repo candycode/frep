@@ -1,0 +1,192 @@
+//#define CYLINDRIC_POSITIONAL_TEXTURE_COORD 1
+#define CYLINDRIC_TEXTURE_COORD 1
+//#define SPHERIC_TEXTURE_COORD 1
+//#define PLANAR_TEXTURE_COORD 1
+//#define SPHERICAL_POSITIONAL_TEXTURE_COORD 1
+//#define CUBEMAP_TEXTURE_COORD 1
+
+#if defined( CUBEMAP_TEXTURE_COORD )
+uniform samplerCube displacement;
+#else
+uniform sampler2D displacement;
+#endif
+
+
+uniform mat4 $1_Mi;
+
+float $1_F( vec3 );
+vec3 $1_G( vec3 );
+
+#define PI 3.14159265 
+#define IM_PI 1./3.14159265
+#define IM_PI2 .5/3.14159265
+
+const float displacementScalingFactor = -.05;
+
+
+float dlinesq( vec2 p1, vec2 p2, vec2 p )
+{
+  
+  vec2 p12 = p2 - p1;
+  vec2 pp2 = p2 - p; 
+  float dpp12 = dot( p12, pp2 );
+  float dp12 = dot( p12, p12 );
+  return dp12 * dp12 - dpp12 * dpp12;
+}
+
+
+float threads( vec2 tcoord )
+{
+  vec2 p0 = vec2( 0., 0. );
+  vec2 p1 = vec2( 1., 0. );
+  const float SQTHICKNESS = 0.01;
+  float M = tan( 45. * PI / 180. ); 
+  //while( p0.y < 1. )
+  {
+    p1.y = M + p0.y;
+    float d = dlinesq( p0, p1, tcoord );
+    if( d <= SQTHICKNESS ) return ( 1. - d );
+    //break;
+    p0.y = p1.y;
+  }
+  return 0.;
+
+}
+
+
+
+#if defined (CUBEMAP_TEXTURE_COORD )
+float B( vec3 texCoord )
+{
+  return 1. - textureCube( displacement, texCoord ).a;
+}
+
+#else
+#define DEPTH_COMPONENT 3
+float B( vec2 texCoord )
+{
+  //return -.2*sin(3. * PI * texture2D( displacement, texCoord )[DEPTH_COMPONENT]);
+  return -texture2D( displacement, texCoord )[DEPTH_COMPONENT]; 
+  
+  //return -threads( texCoord );
+ 
+}
+#endif
+
+
+float blend( float f1, float f2 )
+{
+  // sphere-sphere
+  const float a0 =0.04;
+  const float b0 =.4;
+  const float b1 =.4;
+  // box-sphere
+  //const float a0 =0.08;
+  //const float b0 =.01;//4;
+  //const float b1 =.5;
+  return a0 / ( 1. + (f1*f1/b0) + (f2*f2/b1));
+}
+
+bool gGRAD = false;
+
+float composite_F( vec3 v )
+{
+  vec4 p = vec4( v, 1.0 );
+  float f = $1_F( ( $1_Mi * p ).xyz );
+  vec3 n = normalize( $1_G( ( $1_Mi * p ).xyz ) );
+ 
+#if defined( SPHERIC_TEXTURE_COORD )    
+  // SPHERE
+  float s = .5 * ( IM_PI * atan2( n.y, n.x ) + 1. ); 
+  float t = ( IM_PI * asin( n.y ) + .5 ); 
+#elif defined( SPHERICAL_POSITIONAL_TEXTURE_COORD )  
+  // SPHERICAL POSITIONAL
+  vec3 sp = normalize( ( $1_Mi * p ).xyz );
+  float s = .5 * ( IM_PI * asin( sp.x ) + 1. ); 
+  float t = .5 * ( IM_PI * asin( sp.y ) + 1. ); 
+#elif defined( CYLINDRIC_TEXTURE_COORD )  
+  // CYLINDER
+  float im_pi = 1. / atan2( 1., 0 ); 
+  vec3 sp = ( $1_Mi * p ).xyz;
+  float t =  fract( ( p.z + .5 ) );
+  float s = 0.;
+  s = .5 * ( im_pi * atan2( sp.x, sp.y ) + 1. );
+#elif defined ( PLANAR_TEXTURE_COORD )  
+  // BOX [-.5 .5] x [-.5 .5] 
+  float s =  ( p.x + .5 ); 
+  float t =  ( p.y + .5 );
+#endif
+#ifndef CUBEMAP_TEXTURE_COORD  
+  vec2 texCoord = vec2( s, t );
+  float scaling = displacementScalingFactor * B( texCoord );
+#else
+  vec3 sp = /*normalize*/( ( $1_Mi * p ).xyz );
+  vec3 spt = vec3( sp.xy, .5 );
+  float scalingZ = displacementScalingFactor * B( spt );
+  spt = vec3( .5, sp.yz );
+  float scalingY = displacementScalingFactor * B( spt );
+  spt = vec3( sp.x, .5, sp.z );
+  float scalingX = displacementScalingFactor * B( spt );
+  float scaling = max( scalingX, max( scalingY, scalingZ ) );
+  //float ff = max( scalingY, scalingZ ) + blend( scalingY, scalingZ );
+  //float scaling = max( scalingX, ff ) + blend( scalingX, ff );
+#endif
+  float F = -f +scaling;// + blend( f, scaling );
+  if( gGRAD ) return F;
+  // Proportional to peel thickness
+  const float PEEL_THICKNESS = 0.05; // 0.006
+  if( F > PEEL_THICKNESS ) return 10000000.;
+  // Low pass filter to reduce noise: cutoff spatial frequency is 1./value
+  const float INVCUTOFF = 0.02; // 0.05
+  float r = abs( scaling ) < INVCUTOFF ? F : -1000000.; 
+  //SUBTRACT f TO f+displacement to keep only the displacement
+  //NOTE THAT: the texture filtering mode REPEAT vs CLAMP TO EDGE
+  //           makes a difference in the rendering of the displacement;
+  //           in case of threads and cylindrical mapping, REPEAT makes it looks more
+  //           as a double helix
+  return max( -F, r );  
+ }
+
+uniform float deltaStep;
+vec3 composite_G( in vec3 p )
+{
+    gGRAD = true;
+    float tstep = deltaStep;
+    float dfdz = composite_F( p + vec3( 0., 0., tstep ) ) - composite_F( p + vec3( 0., 0., -tstep ) );
+    float dfdy = composite_F( p + vec3( 0., tstep, 0. ) ) - composite_F( p + vec3( 0., -tstep, 0. ) );
+    float dfdx = composite_F( p + vec3( tstep, 0., 0. ) ) - composite_F( p + vec3( -tstep, 0., 0. ) );
+    gGRAD = false;
+    return 1000. * vec3( dfdx, dfdy, dfdz );// / tstep; 
+}
+
+
+//Mapping Texture Coordinates to Cube Map Faces
+//---------------------------------------------
+//Because there are multiple faces, the mapping of texture coordinates to positions on cube map faces
+//is more complicated than the other texturing targets.  The EXT_texture_cube_map extension
+//is purposefully designed to be consistent with DirectX 7's cube map arrangement.
+//This is also consistent with the cube map arrangement in Pixar's RenderMan package.
+//For cube map texturing, the (s,t,r) texture coordinates are treated as a direction vector (rx,ry,rz)
+//emanating from the center of a cube.  (The q coordinate can be ignored since it merely scales
+//the vector without affecting the direction.) At texture application time, the interpolated per-fragment
+//(s,t,r) selects one of the cube map face's 2D mipmap sets based on the largest magnitude coordinate direction
+//(the major axis direction). The target column in the table below explains how the major axis direction maps
+//to the 2D image of a particular cube map target.
+
+//major axis 
+//direction     target                              sc     tc    ma 
+//----------    ---------------------------------   ---    ---   --- 
+// +rx          GL_TEXTURE_CUBE_MAP_POSITIVE_X_EXT   -rz    -ry   rx 
+// -rx          GL_TEXTURE_CUBE_MAP_NEGATIVE_X_EXT   +rz    -ry   rx 
+// +ry          GL_TEXTURE_CUBE_MAP_POSITIVE_Y_EXT   +rx    +rz   ry 
+// -ry          GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_EXT   +rx    -rz   ry 
+// +rz          GL_TEXTURE_CUBE_MAP_POSITIVE_Z_EXT   +rx    -ry   rz 
+// -rz          GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_EXT   -rx    -ry   rz
+//Using the sc, tc, and ma determined by the major axis direction as specified in the table above,
+//an updated (s,t) is calculated as follows
+//s   =   ( sc/|ma| + 1 ) / 2 
+//t   =   ( tc/|ma| + 1 ) / 2
+//If |ma| is zero or very nearly zero, the results of the above two equations need not be defined
+//(though the result may not lead to GL interruption or termination).  
+//Once the cube map face's 2D mipmap set and (s,t) is determined,
+//texture fetching and filtering proceeds like standard OpenGL 2D texturing.

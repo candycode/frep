@@ -1,0 +1,21 @@
+
+const float s = -10.;
+
+float $F( vec3 p )
+{
+  float r = dot(p,p);
+  if( r < 0.000001 ) return 0.;
+  return 1./(s * r );
+}
+
+vec3 $G( vec3 p )
+{
+  float id =  dot( p, p );
+  id *= id;
+  if( id < 0.000001 ) return vec3( 1., 1., 1. );
+  id = 1. / id;
+  float dx = 2. * p.x;
+  float dy = 2. * p.y;
+  float dz = 2. * p.z;  
+  return id * vec3( dx, dy, dz ); 
+}

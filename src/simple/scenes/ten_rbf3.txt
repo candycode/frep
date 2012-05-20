@@ -1,0 +1,10 @@
+rbf1 materials\red_plastic.txt primitives\rbf3.txt
+rbf2 materials\blue_plastic.txt primitives\rbf3.txt
+rbf3 materials\green_plastic.txt primitives\rbf3.txt
+rbf4 materials\blue_plastic.txt primitives\rbf3.txt
+rbf5 materials\red_plastic.txt primitives\rbf3.txt
+rbf6 materials\blue_plastic.txt primitives\rbf3.txt
+rbf7 materials\green_plastic.txt primitives\rbf3.txt
+rbf8 materials\blue_plastic.txt primitives\rbf3.txt
+rbf9 materials\red_plastic.txt primitives\rbf3.txt
+rbf10 materials\blue_plastic.txt primitives\rbf3.txt

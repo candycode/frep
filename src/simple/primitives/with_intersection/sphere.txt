@@ -1,0 +1,50 @@
+
+
+float $F( vec3 p )
+{
+  return dot( p, p ) - .25;
+}
+
+int $I( in vec3 rayOrig, in vec3 rayDir, out vec3 Pmin, out vec3 Nmin, out vec3 Pmax, out vec3 Nmax )
+{
+
+#ifndef swap
+  #define swap( t, v1, v2 ) { t tmp = v1; v1 = v2; v2 = tmp; }
+#endif
+
+  float a = dot( rayDir, rayDir );
+  float b = 2.0 * dot( rayDir, rayOrig );
+  float c = dot( rayOrig, rayOrig ) - .25;
+  float d = b * b - 4. * a *  c;
+  if( d < 0. ) return 0;
+  float sqrtd = sqrt( d );
+  float t1 = .5 * ( - b - sqrtd ) / a;
+  float t2 = .5 * ( - b + sqrtd ) / a;
+  if( t1 < 0. && t2 < 0. ) return 0;
+  if( t1 <= 0. )
+  {
+     Pmin = rayDir * t2 + rayOrig;
+     Pmax = rayDir * t2 + rayOrig;
+     Nmin = Pmin;
+     Nmax = Pmax;
+     return 1;
+  }
+  else if( t2 <= 0. )  
+  {
+     Pmin = rayDir * t1 + rayOrig;
+     Pmax = rayDir * t1 + rayOrig;
+     Nmin = Pmin;
+     Nmax = Pmax;
+     return 1;
+  }
+  
+  
+  Pmin = rayDir * min( t1, t2 ) + rayOrig;
+  Pmax = rayDir * max( t1, t2 ) + rayOrig;
+  Nmin = Pmin;
+  Nmax = Pmax;
+  return 2;
+
+#undef swap
+
+}
